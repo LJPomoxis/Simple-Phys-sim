@@ -1,0 +1,6 @@
+# Ignore build and libs
+build/
+
+# Ignore vscode stuff
+.vscode/
+*.code-workspace
