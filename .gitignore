@@ -4,3 +4,6 @@ build/
 # Ignore vscode stuff
 .vscode/
 *.code-workspace
+
+# Ignore fonts
+*.ttf
