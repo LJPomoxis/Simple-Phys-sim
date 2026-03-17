@@ -7,6 +7,10 @@
 
 // look at vectors and normals so that we can do fucked up math
 
+// look at using vertices to batch draw calls
+// This requires using triangles to create slices to fill a circle
+// Thus is inefficient with batching, so eventually explore frag shaders
+
 const int HEIGHT = 1080;
 const int WIDTH = 1920;
 const float RESISTANCE = 0.0025f;
@@ -94,9 +98,13 @@ float get_Velocity_Mod() {
 
 int main() {
     sf::Font font;
-    if (!font.openFromFile("Roboto_Condensed-BoldItalic.tff")) {
+    if (!font.openFromFile("..\\Roboto_Condensed-BoldItalic.ttf")) {
         std::cout << "Error loading font" << std::endl; 
     }
+
+    sf::Text text(font);
+    text.setCharacterSize(24);
+    text.setFillColor(sf::Color::White);
 
     sf::RenderWindow window(sf::VideoMode({WIDTH, HEIGHT}), "My window");
     window.setFramerateLimit(60);
@@ -138,15 +146,23 @@ int main() {
         }
     };
 
+    int ballCount;
+    std::string textBallCount;
     while (window.isOpen()) {
+        ballCount = 0;
         // check all the window's events that were triggered since the last iteration of the loop
         window.handleEvents(on_Key_Pressed, on_Close);
         window.clear(sf::Color::Black);
 
         for (Ball& ball : balls) {
+            ballCount++;
             ball.update();
             ball.draw(window);
         }
+
+        textBallCount = "Number of Objects: " + std::to_string(ballCount);
+        text.setString(textBallCount);
+        window.draw(text);
 
         // end the current frame
         window.display();
