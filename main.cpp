@@ -93,6 +93,11 @@ float get_Velocity_Mod() {
 }
 
 int main() {
+    sf::Font font;
+    if (!font.openFromFile("Roboto_Condensed-BoldItalic.tff")) {
+        std::cout << "Error loading font" << std::endl; 
+    }
+
     sf::RenderWindow window(sf::VideoMode({WIDTH, HEIGHT}), "My window");
     window.setFramerateLimit(60);
     window.setVerticalSyncEnabled(true);
@@ -123,6 +128,13 @@ int main() {
         }
         if (keyPressed.scancode == sf::Keyboard::Scancode::Space) {
             balls.emplace_back(posX(gen), randRad(gen), randDensity(gen), randHardness(gen), get_Velocity_Mod());
+        }
+        if (keyPressed.scancode == sf::Keyboard::Scancode::Backspace) {
+            if (!balls.empty()) {
+                balls.pop_back();
+            } else {
+                std::cout << "No objects left to delete" << std::endl;
+            }
         }
     };
 
