@@ -11,6 +11,12 @@
 // This requires using triangles to create slices to fill a circle
 // Thus is inefficient with batching, so eventually explore frag shaders
 
+// (world vs. render coords)
+// create seperation between world units and render units so that physics and static objects
+// can use static world coordinates instead of relying on fixed window size
+// (if we want a dynamic window resolution, rescaling messes with shapes. So we need a scaling system
+// to scale based on fixed coordinates that are decoupled from the window coordinates)
+
 const int WIDTH = 1920;
 const int HEIGHT = 1080;
 const float RESISTANCE = 0.0025f;
@@ -26,6 +32,19 @@ std::uniform_int_distribution<> coin(0, 1);
 std::uniform_int_distribution<> randHardness(20, 100);
 std::uniform_int_distribution<> randDensity(5, 20);
 std::uniform_int_distribution<> velocityMod(10, 35);
+
+void get_Window_Borders(std::vector<StaticBody>& bodies);
+float get_Velocity_Mod();
+
+struct StaticBody {
+    std::vector<int> vertices;
+    bool closed;
+    int friction;
+    int hardness;
+
+    StaticBody(std::vector<int> list, bool close, int fric, int hard)
+        : vertices(std::move(list)), closed(close), friction(fric), hardness(hard) {}
+};
 
 class Ball {
 private:
@@ -92,15 +111,13 @@ public:
     void draw(sf::RenderWindow& window);
 };
 
-float get_Velocity_Mod() {
-    return float(velocityMod(gen)) / 10.f;
-}
-
 int main() {
     sf::Font font;
     if (!font.openFromFile("..\\Roboto_Condensed-BoldItalic.ttf")) {
         std::cout << "Error loading font" << std::endl; 
     }
+
+    std::vector<StaticBody> staticBodies;
 
     sf::Text text(font);
     text.setCharacterSize(24);
@@ -144,6 +161,11 @@ int main() {
                 std::cout << "No objects left to delete" << std::endl;
             }
         }
+        if (keyPressed.scancode == sf::Keyboard::Scancode::Delete) {
+            while (!balls.empty()) {
+                balls.pop_back();
+            }
+        }
     };
 
     int ballCount;
@@ -167,6 +189,14 @@ int main() {
         // end the current frame
         window.display();
     }
+}
+
+void get_Window_Borders(std::vector<StaticBody>& bodies) {
+    bodies.emplace_back();
+}
+
+float get_Velocity_Mod() {
+    return float(velocityMod(gen)) / 10.f;
 }
 
 float Ball::check_X_Edge(float currentSpeed) {
