@@ -5,7 +5,7 @@
             "type": "line",
             "points": [
                 [0, 0],
-                [0, 1920]
+                [0, 1080]
             ],
             "closed": false,
             "friction": 1,
@@ -16,7 +16,7 @@
             "type": "line",
             "points": [
                 [0, 0],
-                [1080, 0]
+                [1920, 0]
             ],
             "closed": false,
             "friction": 1,
@@ -26,8 +26,8 @@
             "id": "RightWall",
             "type": "line",
             "points":[
-                [1080, 0],
-                [1080, 1920]
+                [1920, 0],
+                [1920, 1080]
             ],
             "closed": false,
             "friction": 1,
@@ -37,8 +37,8 @@
             "id": "BottomWall",
             "type": "line",
             "points": [
-                [0, 1920],
-                [1080, 1920]
+                [0, 1080],
+                [1920, 1080]
             ],
             "closed": false,
             "friction": 1,
