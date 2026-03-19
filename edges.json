@@ -9,7 +9,7 @@
             ],
             "closed": false,
             "friction": 1,
-            "hardness": 1
+            "bounciness": 1
         },
         {
             "id": "TopWall",
@@ -20,7 +20,7 @@
             ],
             "closed": false,
             "friction": 1,
-            "hardness": 1
+            "bounciness": 1
         },
         {
             "id": "RightWall",
@@ -31,7 +31,7 @@
             ],
             "closed": false,
             "friction": 1,
-            "hardness": 1
+            "bounciness": 1
         },
         {
             "id": "BottomWall",
@@ -42,7 +42,7 @@
             ],
             "closed": false,
             "friction": 1,
-            "hardness": 1
+            "bounciness": 1
         },
         {
             "id": "triangle1",
@@ -54,7 +54,7 @@
             ],
             "closed": true,
             "friction": 1,
-            "hardness": 1
+            "bounciness": 1
         },
         {
             "id": "rectangle1",
@@ -62,7 +62,7 @@
             "position": [80, 80],
             "size": [40, 40],
             "friction": 1,
-            "hardness": 1
+            "bounciness": 1
         }
     ]
 }
