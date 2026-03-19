@@ -2,9 +2,12 @@
 #include <SFML/Graphics.hpp>
 #include <nlohmann/json.hpp>
 #include <iostream>
+#include <fstream>
 #include <cstdlib>
 #include <ctime>
 #include <random>
+
+using json = nlohmann::json;
 
 // look at vectors and normals so that we can do fucked up math
 
@@ -33,9 +36,6 @@ std::uniform_int_distribution<> coin(0, 1);
 std::uniform_int_distribution<> randHardness(20, 100);
 std::uniform_int_distribution<> randDensity(5, 20);
 std::uniform_int_distribution<> velocityMod(10, 35);
-
-void get_Window_Borders(std::vector<Body>& bodies);
-float get_Velocity_Mod();
 
 struct Vec2 {
     float x, y;
@@ -130,10 +130,25 @@ public:
     void draw(sf::RenderWindow& window);
 };
 
+void get_Window_Borders(std::vector<Body>& bodies);
+float get_Velocity_Mod();
+
 int main() {
     sf::Font font;
     if (!font.openFromFile("..\\Roboto_Condensed-BoldItalic.ttf")) {
-        std::cout << "Error loading font" << std::endl; 
+        std::cerr << "Error loading font" << std::endl; 
+    }
+
+    std::ifstream edges("..\\edges.json");
+    if (!edges) {
+        std::cerr << "Failes to load edges file." << std::endl;
+    }
+
+    json edgeData = json::parse(edges);
+
+    for (auto it = edgeData["shapes"].begin(); it != edgeData["shapes"].end(); ++it) {
+        //std::cout << *it << std::endl;
+        for (auto [key, val] : it[0].items()) std::cout << key << ": " << val << std::endl;
     }
 
     std::vector<Body> staticBodies;
@@ -211,8 +226,7 @@ int main() {
 }
 
 void get_Window_Borders(std::vector<Body>& bodies) {
-    
-    bodies.emplace_back();
+    std::cerr << std::endl;
 }
 
 float get_Velocity_Mod() {
