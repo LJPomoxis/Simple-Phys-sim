@@ -12,8 +12,8 @@
 
 using json = nlohmann::json;
 
-//std::string staticObjectsFile = "..\\edges.json";
-std::string staticObjectsFile = "..\\bounds_test.json";
+//std::string staticObjectsFile = "..\\static_objects.json";
+std::string staticObjectsFile = "..\\test.json";
 
 /*
 Normals are using clockwise winding
