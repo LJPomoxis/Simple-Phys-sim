@@ -1,0 +1,52 @@
+{
+    "shapes": [
+        {
+            "id": "LeftWall",
+            "type": "line",
+            "points": [
+                [0, 1080],
+                [0, 0]
+            ],
+            "size": [0, 0],
+            "closed": false,
+            "friction": 1,
+            "bounciness": 1
+        },
+        {
+            "id": "TopWall",
+            "type": "line",
+            "points": [
+                [1920, 0],
+                [0, 0]
+            ],
+            "size": [0, 0],
+            "closed": false,
+            "friction": 1,
+            "bounciness": 1
+        },
+        {
+            "id": "RightWall",
+            "type": "line",
+            "points":[
+                [1920, 1080],
+                [1920, 0]
+            ],
+            "size": [0, 0],
+            "closed": false,
+            "friction": 1,
+            "bounciness": 1
+        },
+        {
+            "id": "BottomWall",
+            "type": "line",
+            "points": [
+                [1920, 1080],
+                [0, 1080]
+            ],
+            "size": [0, 0],
+            "closed": false,
+            "friction": 1,
+            "bounciness": 1
+        }
+    ]
+}
