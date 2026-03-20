@@ -12,18 +12,31 @@
 
 using json = nlohmann::json;
 
-// Normals are using clockwise winding
-// All shapes should be defined clockwise to be able to get correct normals
+//std::string staticObjectsFile = "..\\edges.json";
+std::string staticObjectsFile = "..\\bounds_test.json";
 
-// look at using vertices to batch draw calls
-// This requires using triangles to create slices to fill a circle
-// Thus is inefficient with batching, so eventually explore frag shaders
+/*
+Normals are using clockwise winding
+All shapes should be defined clockwise to be able to get correct normals
 
-// (world vs. render coords)
-// create seperation between world units and render units so that physics and static objects
-// can use static world coordinates instead of relying on fixed window size
-// (if we want a dynamic window resolution, rescaling messes with shapes. So we need a scaling system
-// to scale based on fixed coordinates that are decoupled from the window coordinates)
+However, due to clockwise winding of normals, vertices of outer edges of bounding box need to be added in
+counter-clockwise order so that the normals point "inward" instead of "outward"
+*/
+
+/*
+ look at using vertices to batch draw calls
+ This requires using triangles to create slices to fill a circle
+ Thus is inefficient with batching, so eventually explore frag shaders
+*/
+
+/*
+(world vs. render coords)
+
+create seperation between world units and render units so that physics and static objects
+can use static world coordinates instead of relying on fixed window size
+(if we want a dynamic window resolution, rescaling messes with shapes. So we need a scaling system
+to scale based on fixed coordinates that are decoupled from the window coordinates)
+*/
 
 const int WIDTH = 1920;
 const int HEIGHT = 1080;
@@ -49,13 +62,10 @@ struct Vec2 {
     Vec2 operator-(const Vec2& other) const { return {x - other.x, y - other.y}; }
     Vec2 operator*(float scalar) const { return {x * scalar, y * scalar}; }
 
-    Vec2 normalize() const {
-        float l = std::sqrt(x*x + y*y);
-        return (l > 0) ? Vec2{x/l, y/l} : Vec2{0, 0};
-    }
-    Vec2 get_normal() const {
-        return Vec2{y, -x}.normalize();
-    }
+    Vec2 normalize() const;
+    Vec2 get_normal() const { return Vec2{y, -x}.normalize(); }
+    float dot_Product(Vec2& vertex, Vec2& object);
+    Vec2 check_collision(Vec2& vertex, float objectX, float objectY, float radius);
     friend std::ostream& operator<<(std::ostream& os, const Vec2& v) {
         return os << "(" << v.x << ", " << v.y << ")";
     }
@@ -73,19 +83,18 @@ struct Body {
     std::vector<Vec2> vertices;
     std::vector<Vec2> vectors;
     std::string type;
-    Size size;
     bool closed;
     int friction;
     int bounciness;
 
     Body() = default;
-    Body(std::vector<Vec2> v, std::string t, Size s, bool c, int f, int b)
-        : vertices(std::move(v)), type(t), size(s) , closed(c), friction(f), bounciness(b) {}
+    Body(std::vector<Vec2> v, std::string t, bool c, int f, int b)
+        : vertices(std::move(v)), type(t), closed(c), friction(f), bounciness(b) {}
 
     void calculate_vectors();
 
     friend std::ostream& operator<<(std::ostream& os, const Body& body) {
-        os << "Type: " << body.type << ", Size: " << body.size << ", Closed: " << body.closed << ", Friction: " << body.friction << ", Bounciness: " << body.bounciness << "\n  Vertices: [ ";
+        os << "Type: " << body.type << ", Closed: " << body.closed << ", Friction: " << body.friction << ", Bounciness: " << body.bounciness << "\n  Vertices: [ ";
         for (const auto& i : body.vertices) {
             os << i << " "; 
         }
@@ -119,6 +128,8 @@ private:
     float xSpeed;
     float ySpeed;
     float hardness;
+
+    void get_Collisions(std::vector<Body>& Bodies);
 
     float check_X_Edge(float speed);
     float check_Y_Edge(float speed);
@@ -159,7 +170,7 @@ public:
     void set_Ball_Pos();
     void set_Ball_Pos(float x);
 
-    void update();
+    void update(std::vector<Body>& Bodies);
     void draw(sf::RenderWindow& window);
 };
 
@@ -175,7 +186,7 @@ int main() {
         std::cerr << "Error loading font" << std::endl; 
     }
 
-    std::ifstream edges("..\\edges.json");
+    std::ifstream edges(staticObjectsFile);
     if (!edges) {
         std::cerr << "Failes to load edges file." << std::endl;
     }
@@ -248,7 +259,7 @@ int main() {
 
         for (Ball& ball : balls) {
             ballCount++;
-            ball.update();
+            ball.update(staticBodies);
             ball.draw(window);
         }
 
@@ -282,12 +293,43 @@ void from_json(const json& j, Size& s) {
 void from_json(const json& j, Body& b) {
     b.vertices = j.at("points").get<std::vector<Vec2>>();
     b.type = j.at("type").get<std::string>();
-    b.size = j.at("size").get<Size>();
     b.closed = j.at("closed").get<bool>();
     b.friction = j.at("friction").get<int>();
     b.bounciness = j.at("bounciness").get<int>();
 
     b.calculate_vectors();
+}
+
+Vec2 Vec2::normalize() const {
+    float l = std::sqrt(x*x + y*y);
+    return (l > 0) ? Vec2{x/l, y/l} : Vec2{0, 0};
+}
+
+// Current code doesn't account for the ends of an edge vector, it just calculates based on an infinite line
+// Thus we need to clamp edge vectors based on vertices
+float Vec2::dot_Product(Vec2& vertex, Vec2& object) {
+    Vec2 normal = get_normal();
+    Vec2 collisonVector = object - vertex;
+    return (collisonVector.x * normal.x) + (collisonVector.y * normal.y);
+}
+
+Vec2 Vec2::check_collision(Vec2& vertex, float objectX, float objectY, float radius) {
+    Vec2 normal = get_normal();
+    Vec2 midpoint = Vec2{vertex.x + x * 0.5f, vertex.y + y * 0.5f};
+    Vec2 toObject = Vec2{objectX - midpoint.x, objectY - midpoint.y};
+    
+    if ((toObject.x * normal.x + toObject.y * normal.y) < 0) {
+        normal = Vec2{-normal.x, -normal.y};
+    }
+
+    Vec2 object{objectX, objectY};
+    float product = dot_Product(vertex, object);
+
+    //if (product < 0) {
+    if (product > -radius && product < radius) {
+        return Vec2{objectX - (product * normal.x), objectY - (product * normal.y)};
+    }
+    return Vec2{objectX, objectY};
 }
 
 void Body::calculate_vectors() {
@@ -300,6 +342,22 @@ void Body::calculate_vectors() {
             vectors.emplace_back(vertices[0] - vertices[i]);
         }
     }
+}
+
+void Ball::get_Collisions(std::vector<Body>& bodies) {
+    Vec2 newPosTemp;
+    float yTmp = yPos;
+    float xTmp = xPos;
+    for (size_t i=0; i < bodies.size(); ++i) {
+        for (size_t j=0; j < bodies[i].vectors.size(); ++j) {
+            newPosTemp = bodies[i].vectors[j].check_collision(bodies[i].vertices[j], xPos, yPos, radius);
+            xPos = newPosTemp.x;
+            yPos = newPosTemp.y;
+        }
+    }
+    // Bad way to handle reflection, we need proper velocity vectors for real relfection calculation
+    if (yTmp != yPos) ySpeed *= -1;
+    if (xTmp != xPos) xSpeed *= -1;
 }
 
 float Ball::check_X_Edge(float currentSpeed) {
@@ -372,12 +430,14 @@ void Ball::set_Ball_Pos(float x) {
     shape.setPosition({xPos, yPos});
 }
 
-void Ball::update() {
+void Ball::update(std::vector<Body>& Bodies) {
     xPos += xSpeed;
     yPos += ySpeed;
 
-    xSpeed = check_X_Edge(xSpeed);
-    ySpeed = check_Y_Edge(ySpeed);
+    get_Collisions(Bodies);
+
+    //xSpeed = check_X_Edge(xSpeed);
+    //ySpeed = check_Y_Edge(ySpeed);
 
     ySpeed = check_Y_Res(ySpeed);
     xSpeed = check_X_Res(xSpeed);
