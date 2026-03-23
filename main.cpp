@@ -39,7 +39,7 @@ to scale based on fixed coordinates that are decoupled from the window coordinat
 */
 
 const int WIDTH = 1920;
-const int HEIGHT = 1080;
+const int HEIGHT = 1200;
 const float RESISTANCE = 0.0025f;
 const float GRAVITY = 0.005f;
 const int NUMBER_BALLS = 25 - 1;
