@@ -71,6 +71,12 @@ struct Vec2 {
     }
 };
 
+struct Vertex {
+    float x, y;
+};
+
+// Remove size as it will no longer be used. We will just add rects 
+// to the objects file using vertices
 struct Size {
     int x, y;
 
@@ -170,6 +176,50 @@ public:
 
     void update(std::vector<Body>& Bodies);
     void draw(sf::RenderWindow& window);
+};
+
+struct ObjectConfig {
+    std::vector<Vertex> vertices;
+    std::vector<Vec2> vectors;
+    std::string type;
+    Vertex position;
+    Vec2 velocity;
+    Vec2 acceleration;
+    float mass;
+    int friction;
+    int bounciness;
+    bool isStatic = true;
+    bool isClosed;
+};
+
+class Object {
+private:
+    std::vector<Vertex> vertices;
+    std::vector<Vec2> vectors;
+    std::string type;
+    Vertex position;
+    Vec2 velocity;
+    Vec2 acceleration;
+    float mass;
+    int friction;
+    int bounciness;
+    bool isStatic = true;
+    bool isClosed;
+
+public:
+    Object() = default;
+    Object(ObjectConfig config)
+        : vertices(std::move(config.vertices)),
+          type(std::move(config.type)),
+          position(config.position),
+          velocity(config.velocity),
+          acceleration(config.acceleration),
+          mass(config.mass),
+          friction(config.friction),
+          bounciness(config.bounciness),
+          isStatic(config.isStatic),
+          isClosed(config.isClosed)
+    {}
 };
 
 void get_Window_Borders(std::vector<Body>& bodies);
