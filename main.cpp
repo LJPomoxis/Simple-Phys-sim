@@ -57,7 +57,7 @@ std::uniform_int_distribution<> velocityMod(10, 35);
 struct Vec2 {
     float x, y;
 
-    Vec2(float x = 0, float y = 0) : x(x), y(y) {}
+    Vec2(float x=0, float y=0) : x(x), y(y) {}
     Vec2 operator+(const Vec2& other) const { return {x + other.x, y + other.y}; }
     Vec2 operator-(const Vec2& other) const { return {x - other.x, y - other.y}; }
     Vec2 operator*(float scalar) const { return {x * scalar, y * scalar}; }
@@ -73,6 +73,12 @@ struct Vec2 {
 
 struct Vertex {
     float x, y;
+
+    Vertex(float x=0, float y=0) : x(x), y(y) {}
+
+    friend std::ostream& operator<<(std::ostream& os, const Vertex& vert) {
+        return os << "(" << vert.x << ", " << vert.y << ")";
+    }
 };
 
 // Remove size as it will no longer be used. We will just add rects 
@@ -220,6 +226,30 @@ public:
           isStatic(config.isStatic),
           isClosed(config.isClosed)
     {}
+
+    friend std::ostream& operator<<(std::ostream& os, const Object& object) {
+        os << "Position: " << object.position << ", Velocity: " << object.velocity << ", Acceleration: " << object.acceleration;
+        os << "\nMass: " << object.mass << ", Friction: " << object.friction << ", Bounciness: " << object.bounciness;
+        os << "\nType: " << object.type << ", Static: " << object.isStatic << ", Closed: " << object.isClosed;
+        os << "\n----------\n Vertices: [";
+        for (const auto& i : object.vertices) {
+            os << i << " "; 
+        }
+        os << "] \n----------\n Vectors: [";
+        for (const auto& j : object.vectors) {
+            os << j << " ";
+        }
+        os << "]";
+        return os;
+    }
+};
+
+class World {
+
+};
+
+class Renderer {
+
 };
 
 void get_Window_Borders(std::vector<Body>& bodies);
