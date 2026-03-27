@@ -9,6 +9,7 @@
                 [0, 0]
             ],
             "closed": false,
+            "static": true,
             "friction": 1,
             "bounciness": 1
         },
@@ -20,6 +21,7 @@
                 [0, 0]
             ],
             "closed": false,
+            "static": true,
             "friction": 1,
             "bounciness": 1
         },
@@ -31,6 +33,7 @@
                 [1920, 1080]
             ],
             "closed": false,
+            "static": true,
             "friction": 1,
             "bounciness": 1
         },
@@ -42,6 +45,7 @@
                 [0, 1080]
             ],
             "closed": false,
+            "static": true,
             "friction": 1,
             "bounciness": 1
         },
@@ -54,6 +58,7 @@
                 [40, 120]
             ],
             "closed": true,
+            "static": true,
             "friction": 1,
             "bounciness": 1
         },
@@ -67,6 +72,7 @@
                 [500, 540]
             ],
             "closed": true,
+            "static": true,
             "friction": 1,
             "bounciness": 1
         }
