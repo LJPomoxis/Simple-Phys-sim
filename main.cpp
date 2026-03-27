@@ -91,34 +91,6 @@ struct Size {
     }
 };
 
-struct Body {
-    std::vector<Vec2> vertices;
-    std::vector<Vec2> vectors;
-    std::string type;
-    bool closed;
-    int friction;
-    int bounciness;
-
-    Body() = default;
-    Body(std::vector<Vec2> v, std::string t, bool c, int f, int b)
-        : vertices(std::move(v)), type(t), closed(c), friction(f), bounciness(b) {}
-
-    void calculate_vectors();
-
-    friend std::ostream& operator<<(std::ostream& os, const Body& body) {
-        os << "Type: " << body.type << ", Closed: " << body.closed << ", Friction: " << body.friction << ", Bounciness: " << body.bounciness << "\n  Vertices: [ ";
-        for (const auto& i : body.vertices) {
-            os << i << " "; 
-        }
-        os << "] \n----------\n Vectors: [";
-        for (const auto& j : body.vectors) {
-            os << j << " ";
-        }
-        os << "]";
-        return os;
-    }
-};
-
 class Ball {
 private:
     const float SPEED = 5.f;
@@ -184,7 +156,7 @@ public:
     void draw(sf::RenderWindow& window);
 };
 
-struct ObjectConfig {
+struct BodyConfig {
     std::vector<Vertex> vertices;
     std::vector<Vec2> vectors;
     std::string type;
@@ -198,7 +170,7 @@ struct ObjectConfig {
     bool isClosed;
 };
 
-class Object {
+class Body {
 private:
     std::vector<Vertex> vertices;
     std::vector<Vec2> vectors;
@@ -213,8 +185,8 @@ private:
     bool isClosed;
 
 public:
-    Object() = default;
-    Object(ObjectConfig config)
+    Body() = default;
+    Body(BodyConfig config)
         : vertices(std::move(config.vertices)),
           type(std::move(config.type)),
           position(config.position),
@@ -227,16 +199,16 @@ public:
           isClosed(config.isClosed)
     {}
 
-    friend std::ostream& operator<<(std::ostream& os, const Object& object) {
-        os << "Position: " << object.position << ", Velocity: " << object.velocity << ", Acceleration: " << object.acceleration;
-        os << "\nMass: " << object.mass << ", Friction: " << object.friction << ", Bounciness: " << object.bounciness;
-        os << "\nType: " << object.type << ", Static: " << object.isStatic << ", Closed: " << object.isClosed;
+    friend std::ostream& operator<<(std::ostream& os, const Body& body) {
+        os << "Position: " << body.position << ", Velocity: " << body.velocity << ", Acceleration: " << body.acceleration;
+        os << "\nMass: " << body.mass << ", Friction: " << body.friction << ", Bounciness: " << body.bounciness;
+        os << "\nType: " << body.type << ", Static: " << body.isStatic << ", Closed: " << body.isClosed;
         os << "\n----------\n Vertices: [";
-        for (const auto& i : object.vertices) {
+        for (const auto& i : body.vertices) {
             os << i << " "; 
         }
         os << "] \n----------\n Vectors: [";
-        for (const auto& j : object.vectors) {
+        for (const auto& j : body.vectors) {
             os << j << " ";
         }
         os << "]";
@@ -251,6 +223,7 @@ private:
 
 public:
     //add body
+    void addBody(Body& body);
 
     //step (step through simulation)
         // apply forces
