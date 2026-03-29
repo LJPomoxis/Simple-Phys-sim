@@ -10,17 +10,8 @@
 #include <ctime>
 #include <random>
 
-using json = nlohmann::json;
-
-//std::string staticObjectsFile = "..\\static_objects.json";
-std::string staticObjectsFile = "..\\test.json";
-
 /*
 Normals are using clockwise winding
-All shapes should be defined clockwise to be able to get correct normals
-
-However, due to clockwise winding of normals, vertices of outer edges of bounding box need to be added in
-counter-clockwise order so that the normals point "inward" instead of "outward"
 */
 
 /*
@@ -29,14 +20,10 @@ counter-clockwise order so that the normals point "inward" instead of "outward"
  Thus is inefficient with batching, so eventually explore frag shaders
 */
 
-/*
-(world vs. render coords)
+using json = nlohmann::json;
 
-create seperation between world units and render units so that physics and static objects
-can use static world coordinates instead of relying on fixed window size
-(if we want a dynamic window resolution, rescaling messes with shapes. So we need a scaling system
-to scale based on fixed coordinates that are decoupled from the window coordinates)
-*/
+//std::string staticObjectsFile = "..\\static_objects.json";
+std::string staticObjectsFile = "..\\test.json";
 
 const int WIDTH = 1920;
 const int HEIGHT = 1200;
@@ -60,7 +47,10 @@ struct Vec2 {
     Vec2 operator-(const Vec2& other) const { return {x - other.x, y - other.y}; }
     Vec2 operator*(float scalar) const { return {x * scalar, y * scalar}; }
 
-    Vec2 normalize() const;
+    Vec2 normalize() const {
+        float l = std::sqrt(x*x + y*y);
+        return (l > 0) ? Vec2{x/l, y/l} : Vec2{0, 0};
+    }
     Vec2 get_normal() const { return Vec2{y, -x}.normalize(); }
     float dot_Product(Vec2& vertex, Vec2& object);
     Vec2 check_collision(Vec2& vertex, float objectX, float objectY, float radius);
@@ -81,69 +71,72 @@ struct Vertex {
     }
 };
 
-struct BodyConfig {
+struct Circle {
+    float radius;
+};
+
+struct Polygon {
     std::vector<Vertex> vertices;
     std::vector<Vec2> vectors;
-    std::string type;
+};
+
+struct Capsule {
+    float radius;
+    // something else to determine rect body
+};
+
+struct LineSegment { // While this is called line 'segment', the current design only allows one segement
+    std::vector<Vertex> vertices;
+    std::vector<Vec2> vectors;
+};
+
+using ShapeType = std::variant<Circle, Polygon, Capsule, LineSegment>;
+
+struct BodyConfig {
+    // use a visitor pattern like std::visit(collisionHanlder{}, shapeA, shapeB);
+    // look at visitor
+    ShapeType shape;
     Vertex position;
     Vec2 velocity;
     Vec2 acceleration;
-    float mass;
+    float weight;
     int friction;
     int bounciness;
     bool isStatic;
-    bool isClosed;
 };
 
 class Body {
 private:
-    std::vector<Vertex> vertices;
-    std::vector<Vec2> vectors;
-    std::string type;
+    ShapeType shape;
     Vertex position;
     Vec2 velocity;
     Vec2 acceleration;
-    float mass;
+    float weight;
     int friction;
     int bounciness;
     bool isStatic = true;
-    bool isClosed;
 
     friend void from_json(const json& j, Body& b);
 
 public:
     Body() = default;
     Body(BodyConfig config)
-        : vertices(std::move(config.vertices)),
-          type(std::move(config.type)),
+        : shape(config.shape),
           position(config.position),
           velocity(config.velocity),
           acceleration(config.acceleration),
-          mass(config.mass),
+          weight(config.weight),
           friction(config.friction),
           bounciness(config.bounciness),
-          isStatic(config.isStatic),
-          isClosed(config.isClosed)
+          isStatic(config.isStatic)
     {}
 
     friend std::ostream& operator<<(std::ostream& os, const Body& body) {
         os << "Position: " << body.position << ", Velocity: " << body.velocity << ", Acceleration: " << body.acceleration;
-        os << "\nMass: " << body.mass << ", Friction: " << body.friction << ", Bounciness: " << body.bounciness;
-        os << "\nType: " << body.type << ", Static: " << body.isStatic << ", Closed: " << body.isClosed;
-        os << "\n----------\n Vertices: [";
-        for (const auto& i : body.vertices) {
-            os << i << " "; 
-        }
-        os << "] \n----------\n Vectors: [";
-        for (const auto& j : body.vectors) {
-            os << j << " ";
-        }
-        os << "]";
+        os << "\nWeight: " << body.weight << ", Friction: " << body.friction << ", Bounciness: " << body.bounciness;
+        os << "\nStatic: " << body.isStatic;
         return os;
     }
-
-    // Update calculate vectors to account for new local coords based on midpoint/position
-    void calculateVectors();
 };
 
 class World {
@@ -160,6 +153,13 @@ public:
         // apply forces
         // resolve collisions
         // apply movement
+
+        // broadphase
+            // Identify potential collisions
+        // narrowphase
+            // Identify details of collisions
+        // solver
+            // Use collision details to resolver/solve collision
     }
 
     const std::vector<Body>& getBodies() const { return bodies; }
@@ -183,7 +183,7 @@ public:
     Vec2 worldToRenderer (Vec2 worldPos) { return { worldPos.x * scale, HEIGHT - (worldPos.y * scale) }; }
 };
 
-void get_Window_Borders(std::vector<Body>& bodies);
+void calculateVectors(const std::vector<Vertex>& vertices, std::vector<Vec2>& vectors);
 float get_Velocity_Mod();
 void from_json(const json& j, Vertex& v);
 void from_json(const json& j, Body& b);
@@ -218,12 +218,6 @@ int main() {
     // This sleeps the loop to achieve fixed framerate so unless we do multithreading it doesn't work
     //window.setFramerateLimit(60);
 
-    float fps = 60.f;
-
-    sf::Clock clock;
-    const sf::Time FRAME_RATE = sf::seconds(1.f / fps);
-    sf::Time timeSinceLastRender = sf::Time::Zero;
-
     const auto on_Close = [&window](const sf::Event::Closed&) {
         window.close();
     };
@@ -234,17 +228,35 @@ int main() {
             window.close();
     };
 
+    float fps = 60.f;
+    const sf::Time FRAME_RATE = sf::seconds(1.f / fps);
+    sf::Time timeSinceLastRender = sf::Time::Zero;
+
+    float simSpeed = 100.f;
+    const sf::Time dt = sf::seconds(1.f / simSpeed);
+    sf::Time accumulator = sf::Time::Zero;
+
+    sf::Clock clock;
+
     std::string hello = "Hello World!";
     text.setString(hello);
     while (window.isOpen()) {
-        sf::Time elapsed = sf::Time::Zero;
-        timeSinceLastRender += elapsed;
+        sf::Time frameTime = clock.restart();
+        timeSinceLastRender += frameTime;
+        accumulator += frameTime;
 
-        // 
-            // Do sim logic here
-        //
+        // avoid death spiral if simulation falls behind
+        if (accumulator > sf::seconds(0.25f)) {
+            accumulator = sf::seconds(0.25f);
+        }
 
         window.handleEvents(on_Key_Pressed, on_Close);
+
+        while (accumulator >= dt) {
+            accumulator -= dt;
+            // Do sim logic here
+            // pass dt as dt.asSeconds()
+        }
 
         if (timeSinceLastRender >= FRAME_RATE) {
             timeSinceLastRender -= FRAME_RATE;
@@ -256,8 +268,16 @@ int main() {
     }
 }
 
-void get_Window_Borders(std::vector<Body>& bodies) {
-    std::cerr << std::endl;
+void calculateVectors(const std::vector<Vertex>& vertices, std::vector<Vec2>& vectors) {
+    if (vertices.size() < 2) return;
+
+    for (size_t i = 0; i < vertices.size(); ++i) {
+        if (i + 1 < vertices.size()) {
+            vectors.emplace_back(vertices[i+1] - vertices[i]);
+        } else if (vertices.size() > 2) { // Currently assumes line segment is only one line, this should be true as the design doesn't allow for more, but look into fix
+            vectors.emplace_back(vertices[0] - vertices[i]);
+        }
+    }    
 }
 
 float get_Velocity_Mod() {
@@ -269,19 +289,32 @@ void from_json(const json& j, Vertex& v) {
     v.y = j.at(1).get<float>();
 }
 
+void from_json(const json& j, Circle& c) { c.radius = j.at("radius").get<float>(); }
+
+void from_json(const json& j, Polygon& p) { p.vertices = j.at("points").get<std::vector<Vertex>>(); }
+
+void from_json(const json& j, Capsule& c) {
+    c.radius = j.at("radius").get<float>();
+    // Finish when capsule is finished
+}
+
+void from_json(const json& j, LineSegment& l) { l.vertices = j.at("points").get<std::vector<Vertex>>(); }
+
 void from_json(const json& j, Body& b) {
-    b.vertices = j.at("points").get<std::vector<Vertex>>();
-    b.type = j.at("type").get<std::string>();
-    b.isClosed = j.at("closed").get<bool>();
     b.friction = j.at("friction").get<int>();
     b.bounciness = j.at("bounciness").get<int>();
 
-    b.calculateVectors();
-}
+    std::string typeName = j.at("type").get<std::string>();
 
-Vec2 Vec2::normalize() const {
-    float l = std::sqrt(x*x + y*y);
-    return (l > 0) ? Vec2{x/l, y/l} : Vec2{0, 0};
+    if (typeName == "Circle") {
+        b.shape = j.at("shape_data").get<Circle>();
+    } else if (typeName == "Polygon") {
+        b.shape = j.at("shape_data").get<Polygon>();
+    } else if (typeName == "Capsule") {
+        b.shape = j.at("shape_data").get<Capsule>();
+    } else if (typeName == "Line") {
+        b.shape = j.at("shape_data").get<LineSegment>();
+    }
 }
 
 // Current code doesn't account for the ends of an edge vector, it just calculates based on an infinite line
@@ -311,6 +344,7 @@ Vec2 Vec2::check_collision(Vec2& vertex, float objectX, float objectY, float rad
     return Vec2{objectX, objectY};
 }
 
+/*
 void Body::calculateVectors() {
     if (vertices.size() < 2) return;
 
@@ -322,6 +356,7 @@ void Body::calculateVectors() {
         }
     }
 }
+*/
 
 void World::addBody(BodyConfig& body) {
     bodies.emplace_back(body);
